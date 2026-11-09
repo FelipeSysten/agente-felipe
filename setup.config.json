@@ -1,0 +1,126 @@
+{
+  "$schema": "./setup.config.schema.json",
+  "version": 2,
+  "project": {
+    "name": "agente-gaucho",
+    "slug": "agente-gaucho",
+    "repoPath": "C:/Users/Brendo/Documents/DEV/agente-gaucho",
+    "createdAt": "2026-10-20T17:40:00-03:00"
+  },
+  "channels": {
+    "enabled": [
+      "whatsapp_cloud",
+      "waha_core"
+    ],
+    "waha_core": {
+      "enabled": true,
+      "session": "default",
+      "engine": "BAILEYS_GATEWAY",
+      "image": "devlikeapro/waha:latest",
+      "hosting": "pc_local: infra/wa-gateway (Baileys, API compatível Waha) + Cloudflare Quick Tunnel com auto-registro"
+    },
+    "waha_plus": {
+      "enabled": false,
+      "session": "default",
+      "engine": "GOWS",
+      "image": "devlikeapro/waha-plus:latest"
+    },
+    "evolution_api": {
+      "enabled": false,
+      "image": "atendai/evolution-api:latest",
+      "instanceName": "default",
+      "port": 8080
+    },
+    "whatsapp_cloud": {
+      "enabled": true,
+      "phoneNumberId": null,
+      "businessAccountId": null,
+      "webhookVerifyToken": null
+    },
+    "instagram_direct": {
+      "enabled": false,
+      "igBusinessAccountId": null,
+      "pageId": null
+    }
+  },
+  "useCase": "sales_delivery",
+  "useCaseNotes": "Assistente de vendas/suporte: responde clientes e encaminha o link de venda do delivery (link configurável no painel).",
+  "language": "pt-BR",
+  "volume": "low",
+  "handoff": {
+    "trigger": "explicit",
+    "destination": "same_channel"
+  },
+  "llm": {
+    "providers": [
+      "google",
+      "groq",
+      "anthropic"
+    ],
+    "primary": "google",
+    "defaultModel": "gemini-2.5-flash",
+    "fallbackChain": [
+      {
+        "provider": "google",
+        "model": "gemini-2.5-flash",
+        "tier": "free"
+      },
+      {
+        "provider": "groq",
+        "model": "openai/gpt-oss-120b",
+        "tier": "free"
+      },
+      {
+        "provider": "anthropic",
+        "model": "claude-haiku-5-5",
+        "tier": "paid",
+        "optional": true
+      }
+    ],
+    "fallbackPolicy": "provider",
+    "memory": "window_20"
+  },
+  "tools": {
+    "calendar": false,
+    "webSearch": false,
+    "rag": false,
+    "webhook": false
+  },
+  "schedule": {
+    "mode": "24_7",
+    "timezone": "America/Sao_Paulo"
+  },
+  "cache": {
+    "enabled": true,
+    "provider": "upstash_redis",
+    "debounce": {
+      "enabled": true,
+      "windowMs": 5000,
+      "maxBufferedMessages": 20,
+      "keyPrefix": "debounce",
+      "runtime": "vercel_after"
+    }
+  },
+  "infra": {
+    "hosting": "vercel",
+    "app": "vercel_hobby",
+    "db": "neon_postgres",
+    "auth": "magic_link_custom",
+    "authEmailProvider": "resend",
+    "domain": "vercel_subdomain",
+    "customDomain": null,
+    "costTarget": "zero",
+    "waha": "pc_local_gateway"
+  },
+  "checkpoint": "deployed",
+  "warnings": [
+    "Vercel Hobby é só para uso não-comercial pelos termos da Vercel; para operar o delivery comercialmente, migrar para Pro ($20/mês).",
+    "Cadeia de IA: Gemini (free) → Groq (free) → Anthropic (paga, só se as grátis falharem; opcional). Modelos validados via API no setup.",
+    "Gemini free tier: o Google pode usar os dados das conversas para melhorar produtos.",
+    "Cloud API: respostas dentro da janela de 24h após msg do cliente são gratuitas; mensagens iniciadas pela empresa (templates) são cobradas — o agente não inicia conversas.",
+    "Cloud API exige um número dedicado registrado (não pode estar ativo no app WhatsApp comum).",
+    "App na Vercel (serverless): debounce via after()/waitUntil em vez de setTimeout em processo longo.",
+    "Waha usa o WhatsApp Web de forma não oficial: risco de bloqueio do número pela Meta em uso abusivo.",
+    "Canal QR roda no PC do usuário: só responde com o PC ligado. Quick Tunnel da Cloudflare não tem SLA."
+  ]
+}

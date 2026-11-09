@@ -1,0 +1,195 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Prisma 6 pinado (§0.9.1). Neon: DATABASE_URL = pooled, DATABASE_URL_UNPOOLED = direta (migrate).
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+// ─── CONTATO cross-channel ──────────────────────────────────────────
+model Contact {
+  /// cuid interno — NUNCA usar como destinatário de sendText (§0.9.27)
+  id            String            @id @default(cuid())
+  displayName   String?
+  notes         String?
+  tags          String[]          @default([])
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  identities    ContactIdentity[]
+  conversations Conversation[]
+}
+
+model ContactIdentity {
+  id         String  @id @default(cuid())
+  contactId  String
+  contact    Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  channel    String // "whatsapp_cloud"
+  /// ID do canal (wa_id da Meta, ex: "5551999999999") — única fonte da verdade p/ envio
+  externalId String
+
+  @@unique([channel, externalId])
+  @@index([contactId])
+}
+
+// ─── CONVERSAS + MSGS ───────────────────────────────────────────────
+model Conversation {
+  id               String        @id @default(cuid())
+  /// FK p/ Contact.id (cuid interno) — NÃO é o número do WhatsApp
+  contactId        String
+  contact          Contact       @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  channel          String
+  agentSessionId   String?
+  agentSession     AgentSession? @relation(fields: [agentSessionId], references: [id])
+  aiEnabled        Boolean       @default(true)
+  handoffRequested Boolean       @default(false)
+  /// Rota do encaminhamento pendente: "atendimento" | "reservas"
+  handoffRoute     String?
+  /// Atendente humano escreveu: a IA fica calada nesta conversa até este instante
+  aiPausedUntil    DateTime?
+  /// Número do bot (só dígitos, sem o nono dígito) em que a conversa acontece. Trocar o
+  /// número conectado esconde as conversas do número anterior no painel.
+  line             String        @default("")
+  lastMessageAt    DateTime?
+  /// Última msg do cliente — define a janela de 24h da Cloud API
+  lastInboundAt    DateTime?
+  createdAt        DateTime      @default(now())
+  messages         Message[]
+
+  @@unique([contactId, channel, line])
+  @@index([channel, line, lastMessageAt])
+  @@index([lastMessageAt])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  direction      String // "inbound" | "outbound"
+  role           String // "user" | "assistant" | "operator" | "system"
+  text           String
+  providerMsgId  String?      @unique
+  tokensIn       Int?
+  tokensOut      Int?
+  costUsd        Decimal?     @db.Decimal(10, 6)
+  modelUsed      String?
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+// ─── AGENT SESSION (persona/config do agente IA) ────────────────────
+model AgentSession {
+  id            String         @id @default(cuid())
+  name          String         @unique
+  /// Aceita placeholders {{DELIVERY_URL}} e {{BUSINESS_NAME}}
+  systemPrompt  String
+  provider      String         @default("google") // google | groq | anthropic
+  model         String         @default("gemini-2.5-flash")
+  temperature   Float          @default(0.6)
+  maxTokens     Int            @default(600)
+  memoryMode    String         @default("window_20")
+  isDefault     Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  conversations Conversation[]
+  aiRules       AIRule[]
+}
+
+model AIRule {
+  id             String       @id @default(cuid())
+  agentSessionId String
+  agentSession   AgentSession @relation(fields: [agentSessionId], references: [id], onDelete: Cascade)
+  priority       Int          @default(100) // menor = avaliado antes
+  enabled        Boolean      @default(true)
+  mode           String // always_on | contact_whitelist | contact_blacklist | keyword_trigger | keyword_pause | schedule | human_takeover
+  params         Json         @default("{}")
+  action         String       @default("respond") // respond | drop | handoff | static_reply
+  staticReply    String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([agentSessionId, priority])
+}
+
+// ─── CONFIG DO NEGÓCIO (singleton editável no painel) ────────────────
+model AppSettings {
+  id                String    @id @default("singleton")
+  businessName      String    @default("Meu Delivery")
+  deliveryUrl       String    @default("")
+  /// WhatsApp do atendente (só dígitos, ex: 5551999999999)
+  handoffPhone      String    @default("")
+  handoffReply      String    @default("Certo! Vou chamar um atendente pra falar contigo. Já já alguém te responde por aqui. 🙌")
+  debounceWindowMs  Int       @default(5000)
+  /// Segundos que a IA fica calada após cada msg do atendente humano
+  humanPauseSeconds Int       @default(30)
+  /// URL pública do gateway/Waha, registrada pelo próprio gateway (túnel muda a cada reinício)
+  wahaBaseUrl       String?
+  wahaBaseUrlAt     DateTime?
+  /// Número conectado hoje no QR code (dígitos canônicos). Null = nenhum conectado.
+  wahaLine          String?
+  updatedAt         DateTime  @updatedAt
+}
+
+// ─── APRENDIZADO (conhecimento validado pela equipe) ───────────────
+/// Pergunta de cliente + resposta certa. Sugerida quando o atendente responde ou
+/// quando alguém corrige a IA no painel; só entra no prompt depois de aprovada.
+model Lesson {
+  id             String   @id @default(cuid())
+  question       String
+  answer         String
+  /// "operator" (atendente respondeu) | "correction" (IA corrigida) | "manual"
+  source         String
+  /// "pending" | "approved" | "rejected"
+  status         String   @default("pending")
+  conversationId String?
+  approvedBy     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([status, updatedAt])
+  @@index([conversationId, createdAt])
+}
+
+// ─── AUTH (login e senha + magic link) ──────────────────────────────
+/// Administradores com login e senha. Os e-mails da ADMIN_EMAILS também são admin.
+model AdminUser {
+  id           String    @id @default(cuid())
+  name         String
+  /// login em minúsculas (ex.: "lana")
+  username     String    @unique
+  /// e-mail em minúsculas; identifica a sessão e permite o link por e-mail
+  email        String    @unique
+  /// scrypt$<salt>$<hash> — a senha nunca é salva
+  passwordHash String?
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model LoginToken {
+  id        String    @id @default(cuid())
+  email     String
+  /// sha256 do token enviado por e-mail — o token cru nunca é salvo
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email])
+}
+
+// ─── GUARDRAILS ─────────────────────────────────────────────────────
+model UsageDaily {
+  id        String   @id @default(cuid())
+  date      DateTime @db.Date
+  contactId String
+  tokensIn  Int      @default(0)
+  tokensOut Int      @default(0)
+  costUsd   Decimal  @default(0) @db.Decimal(10, 6)
+
+  @@unique([date, contactId])
+  @@index([date])
+}

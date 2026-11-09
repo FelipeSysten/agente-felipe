@@ -1,0 +1,42 @@
+# Waha Core (WhatsApp por QR code) + Caddy (HTTPS automático via Let's Encrypt).
+# Roda na VM Oracle Cloud Always Free. Valores em .env (gerado pelo setup.sh).
+services:
+  waha:
+    image: devlikeapro/waha:latest
+    restart: unless-stopped
+    environment:
+      WHATSAPP_DEFAULT_ENGINE: GOWS          # sem browser: leve, ideal p/ VM pequena
+      WHATSAPP_API_PORT: "3000"
+      WAHA_API_KEY: ${WAHA_API_KEY}
+      WHATSAPP_API_KEY_EXCLUDE_PATH: ping,health
+      WAHA_PRINT_QR: "false"
+      WHATSAPP_RESTART_ALL_SESSIONS: "true"  # reconecta a sessão após reboot da VM
+      WAHA_DASHBOARD_ENABLED: "true"
+      WAHA_DASHBOARD_USERNAME: admin
+      WAHA_DASHBOARD_PASSWORD: ${WAHA_DASHBOARD_PASSWORD}
+      WHATSAPP_SWAGGER_ENABLED: "false"
+      WAHA_LOG_LEVEL: info
+      TZ: America/Sao_Paulo
+    volumes:
+      # Sessão do WhatsApp persiste: não precisa reescanear o QR a cada restart
+      - ./sessions:/app/.sessions
+    expose:
+      - "3000"                               # só o Caddy acessa; nunca exposto direto
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on: [waha]
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      WAHA_DOMAIN: ${WAHA_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:
