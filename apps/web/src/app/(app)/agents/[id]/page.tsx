@@ -36,8 +36,8 @@ export default async function AgentPage({ params }: PageProps<"/agents/[id]">) {
           title="Como a IA atende"
           description={
             <>
-              Escreva como falaria com um atendente novo. Use {"{{DELIVERY_URL}}"} para o link do pedido e {"{{BUSINESS_NAME}}"} para
-              o nome da casa. Fatos como horário e taxa ficam melhor em Ensinar a IA.
+              Escreva como falaria com um assistente novo. Use {"{{LINK}}"} para o link do portfólio e {"{{BUSINESS_NAME}}"} para
+              o seu nome/marca. Fatos como preços base e prazos ficam melhor em Ensinar a IA.
             </>
           }
         >

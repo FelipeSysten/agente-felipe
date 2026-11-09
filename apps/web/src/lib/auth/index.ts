@@ -26,7 +26,7 @@ export async function requireUser(): Promise<string> {
   return email;
 }
 
-/** Login e senha. Aceita o login ("lana") ou o e-mail. Retorna o e-mail se a senha confere. */
+/** Login e senha. Aceita o login ("felipe") ou o e-mail. Retorna o e-mail se a senha confere. */
 export async function loginWithPassword(rawLogin: string, password: string): Promise<string | null> {
   const login = rawLogin.trim().toLowerCase();
   const user = await prisma.adminUser.findFirst({ where: { OR: [{ username: login }, { email: login }] } });
@@ -62,7 +62,7 @@ export async function sendMagicLink(rawEmail: string): Promise<void> {
   try {
     const { provider } = await sendEmail({
       to: email,
-      subject: "Seu link de acesso — Agente Gaúcho",
+      subject: "Seu link de acesso — Agente Felipe",
       html: `<p>Clique para entrar no painel (válido por ${TOKEN_TTL_MIN} min):</p>
 <p><a href="${link}">Entrar no painel</a></p>
 <p style="color:#71717a">Se não foi você, ignore este e-mail.</p>`,

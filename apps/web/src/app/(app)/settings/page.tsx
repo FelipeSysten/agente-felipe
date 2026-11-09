@@ -35,34 +35,34 @@ export default async function SettingsPage() {
   type P = { route?: string; keywords?: string[]; phone?: string; reply?: string };
   const byRoute = (route: string) => rules.find((r) => ((r.params as P | null)?.route ?? "atendimento") === route);
   const atendimento = byRoute("atendimento");
-  const reservas = byRoute("reservas");
-  const rp = (reservas?.params ?? {}) as P;
+  const orcamento = byRoute("orcamento");
+  const op = (orcamento?.params ?? {}) as P;
   const keywords = ((atendimento?.params as P | null)?.keywords ?? ROUTE_DEFAULTS.atendimento.keywords).join(", ");
 
   return (
     <Page title="Ajustes" description="Valem para todas as conversas a partir da próxima mensagem.">
       <ActionForm action={saveSettings} submitLabel="Salvar ajustes" className="space-y-0 pb-4">
-        <Section title="A casa" description="Aparecem nas respostas da IA no lugar de {{BUSINESS_NAME}} e {{DELIVERY_URL}}.">
+        <Section title="Você" description="Aparecem nas respostas da IA no lugar de {{BUSINESS_NAME}} e {{LINK}}.">
           <div className="grid gap-4 md:grid-cols-2">
-            <Field id="businessName" label="Nome">
+            <Field id="businessName" label="Nome ou marca">
               <Input id="businessName" name="businessName" defaultValue={settings.businessName} required />
             </Field>
-            <Field id="deliveryUrl" label="Link do pedido (delivery)">
+            <Field id="deliveryUrl" label="Link do portfólio (site, Behance, Instagram…)">
               <Input id="deliveryUrl" name="deliveryUrl" type="url" defaultValue={settings.deliveryUrl} placeholder="https://" />
             </Field>
           </div>
         </Section>
 
         <Section
-          title="Quando o cliente pede atendente"
-          description="A IA pausa naquela conversa, responde o cliente e avisa o atendente no WhatsApp. Também vale quando a IA percebe que o cliente quer falar com uma pessoa."
+          title="Quando o cliente quer falar com você"
+          description="A IA pausa naquela conversa, responde o cliente e marca a conversa em Precisa de você. Se houver um número abaixo, ele também recebe um aviso no WhatsApp."
         >
           <div className="grid gap-4 md:grid-cols-2">
             <Field id="handoffKeywords" label="Palavras que acionam" hint="Separe por vírgula.">
               <Input id="handoffKeywords" name="handoffKeywords" defaultValue={keywords} />
             </Field>
-            <Field id="handoffPhone" label="WhatsApp do atendente" hint="Com DDI e DDD, só números. A IA nunca responde mensagens desse número.">
-              <Input id="handoffPhone" name="handoffPhone" inputMode="numeric" defaultValue={settings.handoffPhone} placeholder="5573999999999" />
+            <Field id="handoffPhone" label="WhatsApp para avisos (opcional)" hint="Com DDI e DDD, só números. Deixe vazio se o aviso iria para o próprio número conectado. A IA nunca responde esse número.">
+              <Input id="handoffPhone" name="handoffPhone" inputMode="numeric" defaultValue={settings.handoffPhone} placeholder="5511999999999" />
             </Field>
             <div className="md:col-span-2">
               <Field id="handoffReply" label="O que o cliente recebe">
@@ -73,23 +73,23 @@ export default async function SettingsPage() {
         </Section>
 
         <Section
-          title="Quando o cliente quer reservar mesa"
-          description="Mesmo caminho do atendimento, mas o aviso vai para a equipe de reservas, já com o que o cliente escreveu (dia, horário, pessoas)."
+          title="Quando o cliente pede orçamento"
+          description="Depois que o cliente explica o que precisa e pede valor, a IA pausa e marca a conversa como Quer orçamento, com o que ele escreveu."
         >
           <label className="mb-4 flex items-center gap-2.5 text-[15px]">
-            <input type="checkbox" name="reservasEnabled" defaultChecked={reservas ? reservas.enabled : true} className="size-4 accent-primary" />
-            Encaminhar pedidos de reserva
+            <input type="checkbox" name="orcamentoEnabled" defaultChecked={orcamento ? orcamento.enabled : true} className="size-4 accent-primary" />
+            Encaminhar pedidos de orçamento
           </label>
           <div className="grid gap-4 md:grid-cols-2">
-            <Field id="reservasKeywords" label="Palavras que acionam" hint="Separe por vírgula.">
-              <Input id="reservasKeywords" name="reservasKeywords" defaultValue={(rp.keywords ?? ROUTE_DEFAULTS.reservas.keywords).join(", ")} />
+            <Field id="orcamentoKeywords" label="Palavras que acionam" hint="Separe por vírgula. A IA também reconhece o pedido sem elas.">
+              <Input id="orcamentoKeywords" name="orcamentoKeywords" defaultValue={(op.keywords ?? ROUTE_DEFAULTS.orcamento.keywords).join(", ")} />
             </Field>
-            <Field id="reservasPhone" label="WhatsApp das reservas" hint="Com DDI e DDD, só números.">
-              <Input id="reservasPhone" name="reservasPhone" inputMode="numeric" defaultValue={rp.phone ?? "5573999091977"} placeholder="5573999091977" />
+            <Field id="orcamentoPhone" label="WhatsApp para avisos (opcional)" hint="Com DDI e DDD, só números. Vazio = só marca no painel.">
+              <Input id="orcamentoPhone" name="orcamentoPhone" inputMode="numeric" defaultValue={op.phone ?? ""} placeholder="5511999999999" />
             </Field>
             <div className="md:col-span-2">
-              <Field id="reservasReply" label="O que o cliente recebe">
-                <Textarea id="reservasReply" name="reservasReply" rows={3} defaultValue={rp.reply ?? ROUTE_DEFAULTS.reservas.reply} />
+              <Field id="orcamentoReply" label="O que o cliente recebe">
+                <Textarea id="orcamentoReply" name="orcamentoReply" rows={3} defaultValue={op.reply ?? ROUTE_DEFAULTS.orcamento.reply} />
               </Field>
             </div>
           </div>
@@ -99,8 +99,8 @@ export default async function SettingsPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <Field
               id="humanPauseSeconds"
-              label="Pausa depois que o atendente responde (segundos)"
-              hint="A IA fica calada nessa conversa por esse tempo; cada mensagem do atendente recomeça a contagem. 0 desliga."
+              label="Pausa depois que você responde (segundos)"
+              hint="A IA fica calada nessa conversa por esse tempo; cada mensagem sua recomeça a contagem. 1800 = 30 min. 0 desliga."
             >
               <Input id="humanPauseSeconds" name="humanPauseSeconds" type="number" min={0} max={86400} step={5} defaultValue={settings.humanPauseSeconds} />
             </Field>
@@ -158,7 +158,7 @@ export default async function SettingsPage() {
                   <Input id="me-name" name="name" autoComplete="name" />
                 </Field>
               )}
-              <Field id="me-username" label="Login" hint="Letras minúsculas, sem espaço. Ex.: rogerio">
+              <Field id="me-username" label="Login" hint="Letras minúsculas, sem espaço. Ex.: felipe">
                 <Input id="me-username" name="username" autoCapitalize="none" autoComplete="username" defaultValue={me?.username ?? myEmail.split("@")[0].replace(/[^a-z0-9._-]/g, "")} required />
               </Field>
               {me?.passwordHash && (
@@ -181,7 +181,7 @@ export default async function SettingsPage() {
               <Field id="new-name" label="Nome">
                 <Input id="new-name" name="name" required />
               </Field>
-              <Field id="new-username" label="Login" hint="Letras minúsculas, sem espaço. Ex.: lana">
+              <Field id="new-username" label="Login" hint="Letras minúsculas, sem espaço. Ex.: maria">
                 <Input id="new-username" name="username" autoCapitalize="none" required />
               </Field>
               <Field id="new-email" label="E-mail">

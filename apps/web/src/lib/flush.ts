@@ -57,6 +57,7 @@ export async function sendAndPersist(
 
 function fillPlaceholders(prompt: string, s: { deliveryUrl: string; businessName: string }) {
   return prompt
+    .replaceAll("{{LINK}}", s.deliveryUrl || "(link ainda não configurado)")
     .replaceAll("{{DELIVERY_URL}}", s.deliveryUrl || "(link ainda não configurado)")
     .replaceAll("{{BUSINESS_NAME}}", s.businessName);
 }
@@ -89,7 +90,7 @@ async function buildHistory(conversationId: string, memoryMode: string): Promise
 }
 
 /**
- * Encaminha a conversa para uma rota (atendimento, reservas…): pausa a IA,
+ * Encaminha a conversa para uma rota (atendimento, orçamento…): pausa a IA,
  * responde o cliente e avisa o número da rota com o que o cliente escreveu.
  */
 async function doHandoff(
@@ -211,7 +212,7 @@ export async function flushConversation(conversationId: string, msgs: ChannelMes
     }
     await recordUsage(conv.contactId, reply.tokensIn, reply.tokensOut, reply.costUsd);
 
-    // Não é cliente do restaurante (conversa pessoal, outro negócio…): IA fica calada
+    // Não é cliente (conversa pessoal, família, outro assunto…): IA fica calada
     if (IGNORE_TAG.test(reply.text)) {
       logEvent("flush.ignored_not_customer", { conversationId, provider: reply.provider });
       return;
@@ -224,7 +225,7 @@ export async function flushConversation(conversationId: string, msgs: ChannelMes
       return;
     }
 
-    // A IA pediu encaminhamento (cliente quis reservar mesa sem usar a palavra-chave etc.)
+    // A IA pediu encaminhamento (cliente pediu orçamento sem usar a palavra-chave etc.)
     const tag = reply.text.match(ROUTE_TAG);
     const tagged = tag && routes.find((r) => r.key === tag[1].toLowerCase());
     if (tagged) {

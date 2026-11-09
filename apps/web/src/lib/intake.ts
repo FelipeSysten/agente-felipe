@@ -42,7 +42,7 @@ export async function intake(msgs: ChannelMessage[]) {
     }
 
     if (staff.has(canonicalPhone(msg.externalId))) {
-      // Msg da própria equipe (atendente, reservas) p/ o número do bot: nunca vai p/ a IA.
+      // Msg da própria equipe (atendente, orçamento) p/ o número do bot: nunca vai p/ a IA.
       logEvent("webhook.from_staff_phone", { channel: msg.channel });
       continue;
     }

@@ -2,7 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 
-export type RouteKey = "atendimento" | "reservas";
+export type RouteKey = "atendimento" | "orcamento";
 
 /** Rota de encaminhamento: palavra-chave (ou a IA) → avisa um número e pausa a IA. */
 export interface HandoffRoute {
@@ -11,7 +11,7 @@ export interface HandoffRoute {
   /** Descrição da intenção, usada no prompt p/ a IA acionar a rota sem palavra-chave. */
   intent: string;
   keywords: string[];
-  /** Só dígitos com DDI (ex: 5573999091977). Vazio = só marca no painel. */
+  /** Só dígitos com DDI (ex: 5573999999999). Vazio = só marca no painel. */
   phone: string;
   /** Mensagem enviada ao cliente ao encaminhar. */
   reply: string;
@@ -23,19 +23,20 @@ type RouteParams = Partial<Omit<HandoffRoute, "ruleId">> & { route?: RouteKey };
 export const ROUTE_DEFAULTS: Record<RouteKey, Omit<HandoffRoute, "phone" | "reply"> & { reply: string }> = {
   atendimento: {
     key: "atendimento",
-    label: "Atendimento",
+    label: "Falar com o Felipe",
     intent:
-      "PEDIR EXPLICITAMENTE para falar com um atendente/uma pessoa da equipe, ou reclamar de um problema com um pedido ou entrega já feito",
-    keywords: ["atendente", "humano", "falar com alguem", "falar com uma pessoa", "reclamacao", "gerente"],
-    reply: "Certo! Vou chamar um atendente pra falar contigo. Já já alguém te responde por aqui. 🙌",
+      "PEDIR EXPLICITAMENTE para falar com o Felipe/uma pessoa, relatar um problema urgente (sistema fora do ar, computador parado, site caído) ou reclamar de um serviço já feito",
+    keywords: ["atendente", "humano", "falar com o felipe", "falar com felipe", "falar com uma pessoa", "reclamacao"],
+    reply: "Certo! Já avisei o Felipe e ele te responde por aqui assim que possível. 🙌",
   },
-  reservas: {
-    key: "reservas",
-    label: "Reservas de mesa",
-    intent: "reservar ou agendar uma mesa no restaurante (data, horário, quantidade de pessoas)",
-    keywords: ["reserva", "reservar", "agendar mesa", "agendamento de mesa", "reservar mesa", "guardar uma mesa"],
+  orcamento: {
+    key: "orcamento",
+    label: "Orçamento",
+    intent:
+      "pedir orçamento, valor, proposta ou fechar um projeto DEPOIS de já ter dito qual serviço quer (design, site/sistema/app, automação ou suporte de TI)",
+    keywords: ["fechar projeto", "fechar o projeto", "proposta comercial"],
     reply:
-      "Que bom! As reservas de mesa são feitas direto com a nossa equipe. Já passei teu pedido pra eles e logo te chamam no WhatsApp (73) 99909-1977 pra confirmar. 🍽️",
+      "Perfeito! Anotei o que você precisa e passei pro Felipe. Ele vai analisar e te manda o orçamento por aqui. 🚀",
   },
 };
 
@@ -80,25 +81,27 @@ export async function staffPhones(): Promise<Set<string>> {
 
 /**
  * Regras do sistema anexadas ao prompt (o texto editável no painel fica intacto):
- * - fatos: nada de inventar horário/preço/taxa — só o que está escrito;
+ * - fatos: nada de inventar preço/prazo/portfólio — só o que está escrito;
  * - encaminhamento e silêncio: a IA aciona uma rota ou fica calada respondendo só
- *   com a tag. O número também recebe conversas pessoais e de outros negócios do
- *   dono — nessas a IA não deve se meter.
+ *   com a tag. Este é o WhatsApp PESSOAL do Felipe — amigos, família e conversas
+ *   que não são de cliente ficam sem resposta da IA.
  */
 export function routingInstructions(routes: HandoffRoute[]): string {
-  const lines = routes.map((r) => `- Se o cliente quiser ${r.intent}: responda APENAS com [[ENCAMINHAR:${r.key}]]`);
+  const lines = routes.map((r) => `- Se a pessoa quiser ${r.intent}: responda APENAS com [[ENCAMINHAR:${r.key}]]`);
   return `\n\n[Regras do sistema — fatos]
-- Horários, preços, taxas e áreas de entrega, formas de pagamento, sabores/produtos disponíveis, promoções, endereço e prazos: use SOMENTE o que estiver escrito acima (prompt ou conhecimento validado).
-- Se a informação não estiver escrita acima, NÃO confirme nem negue — nada de "sim, temos", "aceitamos", "não fazemos" ou valores "aproximados". Diga que essa informação está no link do pedido (cardápio, preços, pagamento) ou ofereça chamar um atendente.
+- Preços, prazos, formas de pagamento, tecnologias, trabalhos já feitos, clientes atendidos e disponibilidade de agenda: use SOMENTE o que estiver escrito acima (prompt ou conhecimento validado).
+- Se a informação não estiver escrita acima, NÃO confirme nem negue — nada de "sim, faço", "custa uns R$…", "fica pronto em X dias". Diga que o Felipe avalia cada projeto e envia o orçamento, ou mande o link do portfólio.
   Exemplos (quando NÃO há essa informação acima):
-  • "aceita cartão?" → "As formas de pagamento aparecem no link, na hora de finalizar o pedido: <link>"
-  • "tem pizza de chocolate?" → "Todos os sabores disponíveis estão no cardápio: <link>"
+  • "quanto custa um site?" → pergunte o que o site precisa ter (páginas, objetivo, prazo); o valor quem passa é o Felipe.
+  • "você já fez app de delivery?" → "Os trabalhos do Felipe estão no portfólio: <link>"
 
 [Regras do sistema — encaminhamento e silêncio]
 ${lines.join("\n")}
-- Se a mensagem claramente NÃO for de um cliente do restaurante — conversa pessoal, recado ou pergunta para alguém pelo nome (ex: "Felipe, …", "Fulano já saiu?"), assunto de outro negócio, pix/pagamento que não seja de pedido do restaurante, ou mensagem automática de outra empresa —: responda APENAS com [[IGNORAR]]. O dono do número responde pessoalmente.
-- Cumprimentos ("oi", "boa noite"), dúvidas sobre cardápio, preços, entrega, horário ou pedidos são de cliente: responda normalmente.
-- Mencionar o nome de alguém ou fazer uma pergunta NÃO é pedir atendente. Na dúvida, responda normalmente como atendente do restaurante, sem tag.
+- Este é o WhatsApp PESSOAL do Felipe. Responda apenas quem claramente quer contratar ou tirar dúvida sobre design, desenvolvimento (sites, sistemas, apps, automações) ou TI.
+- Se a mensagem NÃO for de um cliente ou interessado nos serviços — família, amigos, conversa pessoal, combinados do dia a dia, memes/figurinhas, pix ou cobrança pessoal, mensagem automática de empresa, ou se o histórico acima mostra que é uma conversa pessoal —: responda APENAS com [[IGNORAR]]. O Felipe responde pessoalmente.
+- "Oi"/"boa tarde" de quem não tem histórico pessoal acima: cumprimente e pergunte em que pode ajudar. Perguntas sobre serviços, portfólio, orçamento ou suporte técnico são de cliente: responda normalmente.
+- Chamar o Felipe pelo nome ("Oi Felipe, preciso de um site") NÃO é pedir atendente: responda normalmente como assistente dele.
+- Na dúvida entre cliente e conversa pessoal, prefira [[IGNORAR]].
 - Nunca escreva mais nada junto de uma tag.`;
 }
 

@@ -1,4 +1,6 @@
-# SPEC — agente-gaucho
+# SPEC — agente-felipe
+
+> Adaptado do agente-gaucho (delivery) para o WhatsApp pessoal do Felipe: design, desenvolvimento e TI. As rotas de encaminhamento são **atendimento** ("falar com o Felipe") e **orcamento**; conversas pessoais recebem `[[IGNORAR]]`. O texto abaixo descreve a base técnica herdada.
 
 ## Caso de uso
 Assistente de vendas/suporte que responde clientes e encaminha o **link de venda do delivery** · idioma pt-BR · volume baixo (até 10 conversas simultâneas)

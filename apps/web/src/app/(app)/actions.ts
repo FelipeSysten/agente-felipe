@@ -112,6 +112,7 @@ export async function testAgent(id: string, _prev: ActionState, form: FormData):
   if (!agent || !question) return { ok: false, message: "Escreva uma mensagem de teste" };
   const s = await getSettings();
   const system = agent.systemPrompt
+    .replaceAll("{{LINK}}", s.deliveryUrl || "(link ainda não configurado)")
     .replaceAll("{{DELIVERY_URL}}", s.deliveryUrl || "(link ainda não configurado)")
     .replaceAll("{{BUSINESS_NAME}}", s.businessName);
   try {
@@ -131,10 +132,10 @@ const settingsSchema = z.object({
   debounceWindowMs: z.coerce.number().int().min(3000).max(15000),
   humanPauseSeconds: z.coerce.number().int().min(0, "Pausa: mínimo 0s").max(86_400, "Pausa: máximo 24h (86400s)"),
   handoffKeywords: z.string(),
-  reservasEnabled: z.literal("on").optional(),
-  reservasKeywords: z.string().default(""),
-  reservasPhone: z.string().trim().regex(/^\d{0,15}$/, "Telefone de reservas: só dígitos com DDI, ex 5573999091977"),
-  reservasReply: z.string().trim().default(""),
+  orcamentoEnabled: z.literal("on").optional(),
+  orcamentoKeywords: z.string().default(""),
+  orcamentoPhone: z.string().trim().regex(/^\d{0,15}$/, "Telefone do orçamento: só dígitos com DDI, ex 5511999999999"),
+  orcamentoReply: z.string().trim().default(""),
 });
 
 const splitKeywords = (s: string) => s.split(",").map((k) => k.trim()).filter(Boolean);
@@ -153,8 +154,7 @@ export async function saveSettings(_prev: ActionState, form: FormData): Promise<
   await requireUser();
   const parsed = settingsSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? "Dados inválidos" };
-  const { handoffKeywords, reservasEnabled, reservasKeywords, reservasPhone, reservasReply, ...data } = parsed.data;
-  if (reservasEnabled && !reservasPhone) return { ok: false, message: "Informe o WhatsApp de reservas" };
+  const { handoffKeywords, orcamentoEnabled, orcamentoKeywords, orcamentoPhone, orcamentoReply, ...data } = parsed.data;
 
   await prisma.appSettings.upsert({ where: { id: "singleton" }, create: { id: "singleton", ...data }, update: data });
 
@@ -163,14 +163,14 @@ export async function saveSettings(_prev: ActionState, form: FormData): Promise<
     await upsertRouteRule(agent.id, "atendimento", 10, { keywords: splitKeywords(handoffKeywords) });
     await upsertRouteRule(
       agent.id,
-      "reservas",
+      "orcamento",
       20,
       {
-        keywords: splitKeywords(reservasKeywords),
-        phone: reservasPhone,
-        reply: reservasReply || ROUTE_DEFAULTS.reservas.reply,
+        keywords: splitKeywords(orcamentoKeywords),
+        phone: orcamentoPhone,
+        reply: orcamentoReply || ROUTE_DEFAULTS.orcamento.reply,
       },
-      Boolean(reservasEnabled),
+      Boolean(orcamentoEnabled),
     );
   }
   revalidatePath("/settings");

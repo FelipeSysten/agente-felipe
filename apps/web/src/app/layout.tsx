@@ -8,8 +8,8 @@ import "./globals.css";
 const sans = Schibsted_Grotesk({ variable: "--font-sans", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Atendimento Gaúcho",
-  description: "Atendimento do WhatsApp da Gaúcho Café e Pizzaria",
+  title: "Atendimento Felipe",
+  description: "Assistente de WhatsApp do Felipe — design, desenvolvimento e TI",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

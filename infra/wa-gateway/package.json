@@ -1,5 +1,5 @@
 {
-  "name": "agente-gaucho-wa-gateway",
+  "name": "agente-felipe-wa-gateway",
   "version": "1.0.0",
   "private": true,
   "description": "WhatsApp por QR code (Baileys) com API compatível com o subconjunto do Waha usado pelo app",

@@ -5,7 +5,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   return (
     <main className="flex flex-1 items-center px-5 py-16">
       <div className="mx-auto w-full max-w-sm">
-        <p className="text-3xl leading-tight font-bold">Gaúcho</p>
+        <p className="text-3xl leading-tight font-bold">Felipe</p>
         <p className="mt-1 text-[15px] text-muted-foreground">Atendimento no WhatsApp</p>
 
         <div className="mt-8 rounded-lg border border-border bg-card p-5 shadow-[inset_0_3px_0_var(--primary)]">

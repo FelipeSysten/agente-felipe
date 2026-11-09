@@ -1,42 +1,52 @@
 // Idempotente: pode rodar N vezes. Uso: DATABASE_URL=... npx tsx prisma/seed.ts
+// Só cria o que não existe — depois de rodar, edite tudo pelo painel (Agente e Ajustes).
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-const SYSTEM_PROMPT = `Você é o atendente virtual do {{BUSINESS_NAME}} no WhatsApp. Seu objetivo é ajudar o cliente e levá-lo a fazer o pedido pelo nosso link de delivery.
+const SYSTEM_PROMPT = `Você é o assistente virtual do {{BUSINESS_NAME}} no WhatsApp. O Felipe é designer, programador e profissional de TI, e este é o WhatsApp pessoal dele. Seu papel é atender quem chega interessado nos serviços: entender o que a pessoa precisa e deixar tudo pronto para o Felipe passar o orçamento.
 
-Link do delivery (cardápio, preços e pedido): {{DELIVERY_URL}}
+Serviços:
+- Design: identidade visual, logotipo, artes e posts para redes sociais, UI/UX de sites e aplicativos.
+- Desenvolvimento: sites, landing pages, sistemas web, aplicativos, automações e integrações (inclusive atendentes com IA no WhatsApp, como este).
+- TI: suporte técnico, manutenção e formatação de computadores, redes e Wi-Fi, e-mail profissional, domínio e hospedagem.
+
+Portfólio: {{LINK}}
 
 Como agir:
 - Responda em português do Brasil, com simpatia e de forma curta (1 a 3 frases). Isto é WhatsApp, não e-mail.
-- Quando o cliente quiser pedir, ver cardápio, preços, promoções ou formas de pagamento, envie o link do delivery e explique que lá ele monta o pedido e paga.
-- Se ele já mandou o que quer, confirme de forma breve e envie o link para finalizar.
-- Você NÃO anota pedidos, NÃO confirma pagamentos e NÃO promete prazos de entrega ou preços. Essas informações estão no link.
-- Não invente produtos, preços, horários ou endereços. Se não souber, diga que pelo link ele vê tudo, ou ofereça chamar um atendente.
-- Se o cliente quiser falar com uma pessoa, reclamar de um pedido ou resolver um problema de entrega, diga que ele pode escrever "atendente".
-- Mande o link no máximo uma vez por resposta e sem formatação markdown (WhatsApp não renderiza [texto](link)).`;
+- Entenda o pedido com uma pergunta por vez: qual serviço, para que é (negócio, objetivo), prazo desejado e se já tem referências, logo ou material.
+- Você NÃO passa preços, NÃO fecha prazos e NÃO agenda horários. Cada projeto é avaliado pelo Felipe.
+- Não invente trabalhos, clientes, valores, prazos ou tecnologias que não estejam escritos aqui.
+- Quando pedirem exemplos de trabalhos, mande o link do portfólio, no máximo uma vez por resposta e sem formatação markdown (WhatsApp não renderiza [texto](link)).
+- Se a pessoa quiser falar diretamente com o Felipe, diga que é só escrever "falar com o Felipe".`;
 
-const HANDOFF_KEYWORDS = ["atendente", "humano", "falar com alguem", "falar com uma pessoa", "reclamacao", "gerente"];
+const HANDOFF_KEYWORDS = ["atendente", "humano", "falar com o felipe", "falar com felipe", "falar com uma pessoa", "reclamacao"];
+const ORCAMENTO_KEYWORDS = ["fechar projeto", "fechar o projeto", "proposta comercial"];
 
 async function main() {
   await prisma.appSettings.upsert({
     where: { id: "singleton" },
     create: {
       id: "singleton",
-      deliveryUrl: process.env.DELIVERY_URL ?? "",
+      businessName: process.env.BUSINESS_NAME ?? "Felipe",
+      deliveryUrl: process.env.PORTFOLIO_URL ?? process.env.DELIVERY_URL ?? "",
       handoffPhone: (process.env.HANDOFF_PHONE ?? "").replace(/\D/g, ""),
+      handoffReply: "Certo! Já avisei o Felipe e ele te responde por aqui assim que possível. 🙌",
+      // Número pessoal: quando você responde alguém, a IA fica 30 min calada naquela conversa
+      humanPauseSeconds: 1800,
     },
     update: {},
   });
 
   const agent = await prisma.agentSession.upsert({
-    where: { name: "Vendas Delivery" },
+    where: { name: "Assistente Felipe" },
     create: {
-      name: "Vendas Delivery",
+      name: "Assistente Felipe",
       systemPrompt: SYSTEM_PROMPT,
       provider: "groq",
       model: process.env.GROQ_MODEL ?? "openai/gpt-oss-120b",
-      temperature: 0.6,
+      temperature: 0.5,
       maxTokens: 600,
       memoryMode: "window_20",
       isDefault: true,
@@ -58,9 +68,9 @@ async function main() {
       },
     });
   }
-  const reservas = (await prisma.aIRule.findMany({ where: { agentSessionId: agent.id, mode: "keyword_pause", action: "handoff" } }))
-    .find((r) => (r.params as { route?: string } | null)?.route === "reservas");
-  if (!reservas) {
+  const orcamento = (await prisma.aIRule.findMany({ where: { agentSessionId: agent.id, mode: "keyword_pause", action: "handoff" } }))
+    .find((r) => (r.params as { route?: string } | null)?.route === "orcamento");
+  if (!orcamento) {
     await prisma.aIRule.create({
       data: {
         agentSessionId: agent.id,
@@ -68,9 +78,9 @@ async function main() {
         mode: "keyword_pause",
         action: "handoff",
         params: {
-          route: "reservas",
-          keywords: ["reserva", "reservar", "agendar mesa", "agendamento de mesa", "reservar mesa", "guardar uma mesa"],
-          phone: (process.env.RESERVAS_PHONE ?? "5573999091977").replace(/\D/g, ""),
+          route: "orcamento",
+          keywords: ORCAMENTO_KEYWORDS,
+          phone: (process.env.ORCAMENTO_PHONE ?? "").replace(/\D/g, ""),
         },
       },
     });

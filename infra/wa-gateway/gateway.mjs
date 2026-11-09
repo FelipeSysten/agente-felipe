@@ -65,7 +65,7 @@ async function start() {
     auth: state,
     version,
     logger,
-    browser: Browsers.ubuntu("Agente Gaucho"),
+    browser: Browsers.ubuntu("Agente Felipe"),
     markOnlineOnConnect: false, // não tira as notificações do celular
     syncFullHistory: false,
   });

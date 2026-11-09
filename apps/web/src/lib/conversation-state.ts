@@ -15,7 +15,7 @@ export function conversationState(c: ConversationLike, now: number) {
   if (c.handoffRequested) {
     return {
       kind: "waiting" as const,
-      label: c.handoffRoute === "reservas" ? "Quer reservar mesa" : "Pediu atendente",
+      label: c.handoffRoute === "orcamento" ? "Quer orçamento" : "Quer falar com você",
     };
   }
   if (!c.aiEnabled) return { kind: "paused" as const, label: "IA pausada" };

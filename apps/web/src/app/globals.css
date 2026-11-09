@@ -56,7 +56,7 @@
 }
 
 /*
- * Erva-mate — painel de atendimento da Gaúcho Café e Pizzaria.
+ * Paleta do painel (herdada do projeto anterior). Troque --primary pela sua cor de marca.
  * Cor só p/ estado: mate = IA cuidando · âmbar = IA pausada · alerta = precisa de pessoa.
  */
 :root {

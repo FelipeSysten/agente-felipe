@@ -26,7 +26,7 @@ export async function sendEmail({ to, subject, html }: Mail): Promise<{ provider
       auth: { user: gmailUser, pass: gmailPass },
       connectionTimeout: 10_000,
     });
-    await transport.sendMail({ from: `Agente Gaúcho <${gmailUser}>`, to, subject, html });
+    await transport.sendMail({ from: `Agente Felipe <${gmailUser}>`, to, subject, html });
     return { provider: "gmail" };
   }
 

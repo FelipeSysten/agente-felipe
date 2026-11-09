@@ -1,5 +1,5 @@
 {
-  "name": "agente-gaucho-web",
+  "name": "agente-felipe-web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate deploy",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx --env-file-if-exists=.env prisma/seed.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.136.0",

@@ -128,5 +128,5 @@ export async function lessonsForPrompt(customerText: string): Promise<string> {
   }
 
   const items = picked.map((l) => `P: ${clip(l.question, 300)}\nR: ${clip(l.answer, 500)}`).join("\n\n");
-  return `\n\n[Conhecimento validado pela equipe — são respostas reais do restaurante. Quando o cliente perguntar algo parecido, responda com estas informações, adaptando ao contexto e ao seu jeito de falar. Se não se aplicar, ignore.]\n${items}`;
+  return `\n\n[Conhecimento validado pela equipe — são respostas reais do Felipe. Quando o cliente perguntar algo parecido, responda com estas informações, adaptando ao contexto e ao seu jeito de falar. Se não se aplicar, ignore.]\n${items}`;
 }

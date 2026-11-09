@@ -65,7 +65,7 @@ export default async function TodayPage() {
 
       <Section
         title={waiting.length ? `Precisa de você (${waiting.length})` : "Precisa de você"}
-        description={waiting.length ? "Clientes que pediram atendente ou reserva. A IA está pausada nessas conversas." : undefined}
+        description={waiting.length ? "Clientes que pediram para falar com você ou um orçamento. A IA está pausada nessas conversas." : undefined}
       >
         {waiting.length === 0 ? (
           <p className="rounded-lg bg-accent px-4 py-4 text-[15px] text-accent-foreground">

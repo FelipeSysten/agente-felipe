@@ -26,7 +26,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="flex min-h-screen flex-col md:flex-row">
       <aside className="border-b border-sidebar-border bg-sidebar md:sticky md:top-0 md:flex md:h-screen md:w-60 md:shrink-0 md:flex-col md:border-r md:border-b-0">
         <div className="px-6 pt-5 pb-4">
-          <p className="text-lg leading-tight font-bold tracking-tight">Gaúcho</p>
+          <p className="text-lg leading-tight font-bold tracking-tight">Felipe</p>
           <p className="text-sm text-muted-foreground">Atendimento no WhatsApp</p>
         </div>
         <NavLinks items={items} />

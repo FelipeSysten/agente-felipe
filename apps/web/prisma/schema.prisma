@@ -45,7 +45,7 @@ model Conversation {
   agentSession     AgentSession? @relation(fields: [agentSessionId], references: [id])
   aiEnabled        Boolean       @default(true)
   handoffRequested Boolean       @default(false)
-  /// Rota do encaminhamento pendente: "atendimento" | "reservas"
+  /// Rota do encaminhamento pendente: "atendimento" | "orcamento"
   handoffRoute     String?
   /// Atendente humano escreveu: a IA fica calada nesta conversa até este instante
   aiPausedUntil    DateTime?
@@ -84,7 +84,7 @@ model Message {
 model AgentSession {
   id            String         @id @default(cuid())
   name          String         @unique
-  /// Aceita placeholders {{DELIVERY_URL}} e {{BUSINESS_NAME}}
+  /// Aceita placeholders {{LINK}} (ou {{DELIVERY_URL}}) e {{BUSINESS_NAME}}
   systemPrompt  String
   provider      String         @default("google") // google | groq | anthropic
   model         String         @default("gemini-2.5-flash")
